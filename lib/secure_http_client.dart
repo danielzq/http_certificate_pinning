@@ -7,47 +7,52 @@ import 'package:http/io_client.dart';
 import 'package:http_certificate_pinning/http_certificate_pinning.dart';
 
 class SecureHttpClient extends http.BaseClient {
+
   List<String> allowedSHAFingerprints;
 
   final IOClient _client = IOClient();
 
-  SecureHttpClient._internal({required this.allowedSHAFingerprints});
+  SecureHttpClient._internal({this.allowedSHAFingerprints});
 
-  factory SecureHttpClient.build(List<String> allowedSHAFingerprints) {
+  factory SecureHttpClient.build(
+      List<String> allowedSHAFingerprints
+      ) {
+    //Remove any value that is null.
+    allowedSHAFingerprints?.removeWhere((fingerPrint) => fingerPrint == null);
     return SecureHttpClient._internal(
-        allowedSHAFingerprints: allowedSHAFingerprints);
+        allowedSHAFingerprints: allowedSHAFingerprints
+    );
   }
 
-  Future<Response> head(url, {Map<String, String>? headers}) =>
+  Future<Response> head(url, {Map<String, String> headers}) =>
       _sendUnstreamed("HEAD", url, headers);
 
-  Future<Response> get(url, {Map<String, String>? headers}) =>
+  Future<Response> get(url, {Map<String, String> headers}) =>
       _sendUnstreamed("GET", url, headers);
 
   Future<Response> post(url,
-          {Map<String, String>? headers, body, Encoding? encoding}) =>
+      {Map<String, String> headers, body, Encoding encoding}) =>
       _sendUnstreamed("POST", url, headers, body, encoding);
 
   Future<Response> put(url,
-          {Map<String, String>? headers, body, Encoding? encoding}) =>
+      {Map<String, String> headers, body, Encoding encoding}) =>
       _sendUnstreamed("PUT", url, headers, body, encoding);
 
   Future<Response> patch(url,
-          {Map<String, String>? headers, body, Encoding? encoding}) =>
+      {Map<String, String> headers, body, Encoding encoding}) =>
       _sendUnstreamed("PATCH", url, headers, body, encoding);
 
-  Future<Response> delete(url,
-          {Map<String, String>? headers, body, Encoding? encoding}) =>
-      _sendUnstreamed("DELETE", url, headers, body, encoding);
+  Future<Response> delete(url, {Map<String, String> headers}) =>
+      _sendUnstreamed("DELETE", url, headers);
 
-  Future<String> read(url, {Map<String, String>? headers}) {
+  Future<String> read(url, {Map<String, String> headers}) {
     return get(url, headers: headers).then((response) {
       _checkResponseSuccess(url, response);
       return response.body;
     });
   }
 
-  Future<Uint8List> readBytes(url, {Map<String, String>? headers}) {
+  Future<Uint8List> readBytes(url, {Map<String, String> headers}) {
     return get(url, headers: headers).then((response) {
       _checkResponseSuccess(url, response);
       return response.bodyBytes;
@@ -58,17 +63,18 @@ class SecureHttpClient extends http.BaseClient {
 
   /// Sends a non-streaming [Request] and returns a non-streaming [Response].
   Future<Response> _sendUnstreamed(
-      String method, url, Map<String, String>? headers,
-      [body, Encoding? encoding]) async {
-    final secure = await (HttpCertificatePinning.check(
-      serverURL: url.toString(),
-      headerHttp: headers,
-      sha: SHA.SHA256,
-      allowedSHAFingerprints: allowedSHAFingerprints,
-      timeout: 50,
-    ));
+      String method, url, Map<String, String> headers,
+      [body, Encoding encoding]) async {
 
-    if (secure.contains("CONNECTION_SECURE")) {
+    final secure = await HttpCertificatePinning.check(
+        serverURL: url.toString(),
+        headerHttp: headers,
+        sha: SHA.SHA256,
+        allowedSHAFingerprints: allowedSHAFingerprints,
+        timeout : 50
+    );
+
+    if(secure.contains("CONNECTION_SECURE")){
       var request = Request(method, _fromUriOrString(url));
 
       if (headers != null) request.headers.addAll(headers);
@@ -86,7 +92,7 @@ class SecureHttpClient extends http.BaseClient {
       }
 
       return Response.fromStream(await send(request));
-    } else {
+    }else{
       throw Exception("CONNECTION_NOT_SECURE");
     }
   }

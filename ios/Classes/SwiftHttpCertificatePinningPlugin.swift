@@ -5,7 +5,7 @@ import Alamofire
 
 public class SwiftHttpCertificatePinningPlugin: NSObject, FlutterPlugin {
 
-    let manager = Alamofire.SessionManager.default
+    let manager = Alamofire.Session.default
     var fingerprints: Array<String>?
     var flutterResult: FlutterResult?
 
@@ -54,7 +54,7 @@ public class SwiftHttpCertificatePinningPlugin: NSObject, FlutterPlugin {
             timeout = timeoutArg
         }
 
-        Alamofire.request(urlString, parameters: headers).validate().responseJSON() { response in
+        AF.request(urlString, parameters: headers).validate().responseJSON() { response in
             switch response.result {
             case .success:
                 break
@@ -66,48 +66,48 @@ public class SwiftHttpCertificatePinningPlugin: NSObject, FlutterPlugin {
 
         manager.session.configuration.timeoutIntervalForRequest = TimeInterval(timeout)
 
-        manager.delegate.sessionDidReceiveChallenge = { session, challenge in
-
-            guard let serverTrust = challenge.protectionSpace.serverTrust, let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
-                self.sendResponse(result: FlutterError(code: "ERROR CERT", message: "Invalid Certificate", details: nil))
-                return (.cancelAuthenticationChallenge, nil)
-            }
-
-            // Set SSL policies for domain name check
-            let policies: [SecPolicy] = [SecPolicyCreateSSL(true, (challenge.protectionSpace.host as CFString))]
-            SecTrustSetPolicies(serverTrust, policies as CFTypeRef)
-
-            // Evaluate server certificate
-            var result: SecTrustResultType = .invalid
-            SecTrustEvaluate(serverTrust, &result)
-            let isServerTrusted: Bool = (result == .unspecified || result == .proceed)
-
-            let serverCertData = SecCertificateCopyData(certificate) as Data
-            var serverCertSha = serverCertData.sha256().toHexString()
-
-            if(type == "SHA1"){
-                serverCertSha = serverCertData.sha1().toHexString()
-            }
-
-            var isSecure = false
-            if var fp = self.fingerprints {
-                fp = fp.compactMap { (val) -> String? in
-                    val.replacingOccurrences(of: " ", with: "")
-                }
-
-                isSecure = fp.contains(where: { (value) -> Bool in
-                    value.caseInsensitiveCompare(serverCertSha) == .orderedSame
-                })
-            }
-
-            if isServerTrusted && isSecure {
-                self.sendResponse(result: "CONNECTION_SECURE" as AnyObject)
-            }else {
-                self.sendResponse(result: FlutterError(code: "CONNECTION_NOT_SECURE", message: nil, details: nil))
-            }
-
-            return (.cancelAuthenticationChallenge, nil)
-        }
+//        manager.delegate.sessionDidReceiveChallenge = { session, challenge in
+//
+//            guard let serverTrust = challenge.protectionSpace.serverTrust, let certificate = SecTrustGetCertificateAtIndex(serverTrust, 0) else {
+//                self.sendResponse(result: FlutterError(code: "ERROR CERT", message: "Invalid Certificate", details: nil))
+//                return (.cancelAuthenticationChallenge, nil)
+//            }
+//
+//            // Set SSL policies for domain name check
+//            let policies: [SecPolicy] = [SecPolicyCreateSSL(true, (challenge.protectionSpace.host as CFString))]
+//            SecTrustSetPolicies(serverTrust, policies as CFTypeRef)
+//
+//            // Evaluate server certificate
+//            var result: SecTrustResultType = .invalid
+//            SecTrustEvaluate(serverTrust, &result)
+//            let isServerTrusted: Bool = (result == .unspecified || result == .proceed)
+//
+//            let serverCertData = SecCertificateCopyData(certificate) as Data
+//            var serverCertSha = serverCertData.sha256().toHexString()
+//
+//            if(type == "SHA1"){
+//                serverCertSha = serverCertData.sha1().toHexString()
+//            }
+//
+//            var isSecure = false
+//            if var fp = self.fingerprints {
+//                fp = fp.compactMap { (val) -> String? in
+//                    val.replacingOccurrences(of: " ", with: "")
+//                }
+//
+//                isSecure = fp.contains(where: { (value) -> Bool in
+//                    value.caseInsensitiveCompare(serverCertSha) == .orderedSame
+//                })
+//            }
+//
+//            if isServerTrusted && isSecure {
+//                self.sendResponse(result: "CONNECTION_SECURE" as AnyObject)
+//            }else {
+//                self.sendResponse(result: FlutterError(code: "CONNECTION_NOT_SECURE", message: nil, details: nil))
+//            }
+//
+//            return (.cancelAuthenticationChallenge, nil)
+//        }
 
     }
 
